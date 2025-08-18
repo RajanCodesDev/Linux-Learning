@@ -1,0 +1,5 @@
+2025-08-01 10:12:33 INFO User login: Alice
+2025-08-01 10:13:40 ERROR Disk full on /dev/sda1
+2025-08-01 10:15:05 INFO File uploaded by Bob
+2025-08-01 10:20:00 WARN High memory usage
+2025-08-01 10:21:22 ERROR Failed to start service nginx
