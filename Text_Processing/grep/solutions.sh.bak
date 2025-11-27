@@ -1,0 +1,76 @@
+#!/bin/bash
+
+echo -e "\033[35m
+Find all entries that returned a 500 status code
+\033[m"
+echo "awk '$8==500 { print $0 }' activity.log\n"
+
+
+echo -e "\033[35m
+How many POST requests were made?
+\033[m"
+echo "awk '$6=="POST" {sum++} END { print sum } ' activity.log\n"
+
+
+echo -e "\033[35m
+List all the unique IP addresses that accessed the server
+\033[m"
+echo "grep -Eo "([0-9]{1,3}\.){3}[0-9]{1,3}" activity.log | sort | uniq\n"
+
+echo "awk '{ print$4}' activity.log | sort | uniq\n"
+
+
+
+
+echo -e "\033[35m
+Show all lines that accessed the /login page
+\033[m"    
+echo "awk '$7=="/login" {print $0}' activity.log\n"
+echo "grep "login" activity.log\n"
+
+
+echo -e "\033[35m
+Find all lines where the browser is Chrome.
+\033[m"
+echo "awk ' $9 ~ /^Chrome/ ' activity.log\n"
+echo "grep -i "chrome" activity.log\n"
+
+
+echo -e "\033[35m
+Display all log lines from IP address 192.168.1.10
+\033[m"
+echo "awk '$4=="192.168.1.10"' activity.log"
+echo "grep -i "192.168.1.10" activity.log"
+
+
+echo -e "\033[35m
+How many requests were served with a status code 200?
+\033[m"
+echo "awk ' $8=="200" {sum++} END {print sum}' activity.log"
+echo "grep -c "200" activity.log"
+
+
+echo -e "\033[35m
+Find all lines that happened between 10:20:00 and 10:23:00
+\033[m"
+echo  "awk ' $2 ~ /^10:2[0-9]:[0-9][0-9]/ ' activity.log"
+echo  "grep "10:2[0-3]:[0-9][0-9]" activity.log"
+
+
+echo -e "\033[35m
+Which pages returned a 404 error?
+\033[m"
+echo "awk ' $8=="404" { print $7}' activity.log"
+
+
+echo -e "\033[35m
+Find all the entries that include the word ERROR (case-sensitive).
+\033[m"
+echo "awk '$3 ~ /ERROR/ ' activity.log"
+echo "grep "ERROR" activity.log"
+
+
+
+
+
+
