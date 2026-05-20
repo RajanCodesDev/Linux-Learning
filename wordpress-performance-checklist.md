@@ -1,5 +1,193 @@
 # WordPress Performance Optimization Checklist (NGINX + PHP-FPM + Redis + FastCGI)
 
+## Nginx Template
+``` 
+# /run/php/php8.3-fpm.sock
+
+server {
+
+    server_name wkndgetaways.in;
+
+    root /var/www/html/wkndgetaways;
+    index index.php index.html index.htm;
+
+    client_max_body_size 128M;
+
+    access_log /var/log/nginx/wkndgetaways.access.log;
+    error_log  /var/log/nginx/wkndgetaways.error.log warn;
+
+    charset utf-8;
+
+    # =========================================================
+    # BASIC SECURITY
+    # =========================================================
+
+    server_tokens off;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
+    # =========================================================
+    # BLOCK HIDDEN/SENSITIVE FILES
+    # =========================================================
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+
+    location ~* \.(env|ini|log|conf|sql|bak|old|swp|dist)$ {
+        deny all;
+    }
+
+    location ~* /(composer\.(json|lock)|package(-lock)?\.json|yarn\.lock)$ {
+        deny all;
+    }
+
+    # =========================================================
+    # BLOCK COMMON ABUSE PATHS
+    # =========================================================
+
+    location ~ ^/(cgi-bin|\.git|backup|backups)/ {
+        deny all;
+    }
+
+    # =========================================================
+    # STATIC FILES
+    # =========================================================
+
+	location ~* \.(jpg|jpeg|png|gif|ico|svg|webp|avif|css|js|woff|woff2|ttf)$ {
+
+	    expires 30d;
+
+	    access_log off;
+	    log_not_found off;
+
+	    add_header Cache-Control "public, immutable";
+	}
+
+    # =========================================================
+    # MAIN ROUTING
+    # =========================================================
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # =========================================================
+    # PHP HANDLER
+    # =========================================================
+
+    location ~ \.php$ {
+
+	    try_files $uri =404;
+
+	    include fastcgi_params;
+
+	    fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+
+	    fastcgi_index index.php;
+
+	    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+
+	    fastcgi_param HTTPS on;
+
+	    # CACHE
+	    fastcgi_cache WORDPRESS;
+	    fastcgi_cache_valid 200 301 302 60m;
+	    fastcgi_cache_use_stale error timeout invalid_header updating http_500;
+	    fastcgi_cache_min_uses 1;
+	    fastcgi_cache_lock on;
+
+	    add_header X-FastCGI-Cache $upstream_cache_status;
+
+	    # BYPASS CACHE FOR ADMIN/LOGGED-IN
+	    set $skip_cache 0;
+
+	    if ($request_method = POST) {
+	        set $skip_cache 1;
+	    }
+
+	    if ($query_string != "") {
+	        set $skip_cache 1;
+	    }
+
+	    if ($request_uri ~* "/wp-admin/|/xmlrpc.php|wp-.*.php|/feed/|index.php|sitemap(_index)?.xml") {
+	        set $skip_cache 1;
+	    }
+
+	    if ($http_cookie ~* "comment_author|wordpress_[a-f0-9]+|wp-postpass|wordpress_logged_in") {
+	        set $skip_cache 1;
+	    }
+
+	    fastcgi_cache_bypass $skip_cache;
+	    fastcgi_no_cache $skip_cache;
+
+	    fastcgi_buffers 16 16k;
+	    fastcgi_buffer_size 32k;
+
+	    fastcgi_read_timeout 300;
+	    fastcgi_connect_timeout 300;
+	    fastcgi_send_timeout 300;
+
+        # try_files $uri =404;
+# 
+        # include fastcgi_params;
+# 
+        # fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+# 
+        # fastcgi_index index.php;
+# 
+        # fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+# 
+        # fastcgi_intercept_errors on;
+# 
+        # fastcgi_buffers 16 16k;
+        # fastcgi_buffer_size 32k;
+# 
+        # fastcgi_read_timeout 300;
+    }
+
+    # =========================================================
+    # DENY EXECUTION OF DANGEROUS EXTENSIONS
+    # =========================================================
+
+    # location ~* \.(php|php5|phtml|phar)$ {
+        # deny all;
+    # }
+
+    listen 443 ssl http2; # managed by Certbot
+    listen [::]:443 ssl http2; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/wkndgetaways.in/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/wkndgetaways.in/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+
+
+
+server {
+    if ($host = wkndgetaways.in) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    listen [::]:80;
+
+    server_name wkndgetaways.in;
+    return 404; # managed by Certbot
+
+
+}
+
+```
+
+
 ## Goal
 
 Optimize WordPress sites for:
